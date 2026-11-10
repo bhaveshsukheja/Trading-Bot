@@ -1,0 +1,10 @@
+{
+ "equity": 10000.0,
+ "peak_equity": 10000.0,
+ "position": null,
+ "trades": [],
+ "halted": false,
+ "day": null,
+ "day_start_equity": 10000.0,
+ "last_bar": "2026-11-10T23:00:00+00:00"
+}
