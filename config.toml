@@ -1,0 +1,63 @@
+# Memecoin bot configuration. All thresholds are untested heuristics -- tune them
+# against your own paper-trading results before trusting any of them.
+
+[general]
+chain = "solana"
+mode = "paper"              # only "paper" is implemented; no real orders are ever sent
+cycle_seconds = 120         # pause between full scan cycles
+max_deep_candidates = 5     # tokens per cycle that get candles + trades + safety checks
+db_path = "data/bot.sqlite"
+log_path = "data/bot.log"
+
+[filters]                   # hard filters: a token failing any of these is never bought
+min_liquidity_usd = 30000
+min_volume_h24_usd = 100000
+min_age_hours = 1.0         # skip the first hour, where most rugs happen
+max_age_days = 30
+min_market_cap_usd = 100000
+max_market_cap_usd = 50000000
+max_rug_score_normalised = 30   # RugCheck score_normalised; lower looked safer in testing
+max_top_trader_volume_share = 0.35  # one wallet doing >35% of recent volume = likely wash trading
+
+[strategy]
+entry_score = 65            # 0-100 composite score needed to open a position
+# Component weights. If X is not configured its weight is redistributed.
+weight_momentum = 25
+weight_flow = 25
+weight_ta = 20
+weight_wallets = 15
+weight_social = 15
+
+[risk]
+starting_cash_usd = 1000.0
+position_pct = 0.05         # fraction of equity per position
+max_open_positions = 5
+daily_loss_limit_pct = 0.10 # stop opening positions after losing this share of equity in a UTC day
+reentry_cooldown_hours = 6
+
+[exits]
+stop_loss_pct = 0.15
+take_profit_pct = 0.40      # sell take_profit_fraction of the position here
+take_profit_fraction = 0.5
+trailing_activate_pct = 0.20
+trailing_stop_pct = 0.20    # from the highest price seen after activation
+max_hold_hours = 12
+liquidity_drop_exit_pct = 0.50  # exit if pool liquidity falls this much from entry
+
+[costs]                     # simulated execution costs for paper trades
+fee_pct = 0.003             # pool fee per side
+base_slippage_pct = 0.005   # extra slippage per side on top of price impact
+network_fee_usd = 0.05      # priority fee / tip estimate per transaction
+
+[wallets]
+# Wallets you want followed, in addition to ones the bot discovers itself.
+watchlist = []
+smart_min_realized_pnl_usd = 500
+smart_min_winning_tokens = 2
+bot_max_trades_per_window = 40  # wallets with more trades than this in one 300-trade window are treated as bots
+
+[x]
+# Needs an X API bearer token in the X_BEARER_TOKEN environment variable.
+enabled = true
+max_lookups_per_cycle = 3   # X API quotas are small; only the best candidates are looked up
+cache_minutes = 30
