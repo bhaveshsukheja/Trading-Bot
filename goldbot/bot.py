@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from . import research, tradingview
+from . import research
 from .broker import PaperBroker
 from .data import INTERVAL_SECONDS, DataError, fetch_bars, split_completed
 from .strategy import blend, decide, technical_frame
@@ -51,16 +51,14 @@ def run_cycle(cfg, now: pd.Timestamp | None = None) -> dict:
     else:
         tf = technical_frame(done, cfg)
         tech, atr = float(tf["score"].iloc[-1]), float(tf["atr"].iloc[-1])
-        tv = _try(tradingview.fetch_rating, cfg.tv_ticker, cfg.tv_market)
         macro = _try(research.macro_score, cfg)
         news = _try(research.news_score, cfg)
-        scores = {"technical": tech, "tradingview": tv["score"],
-                  "macro": macro["score"], "news": news["score"]}
+        scores = {"technical": tech, "macro": macro["score"], "news": news["score"]}
         score = blend(scores, cfg.weights)
         action = decide(score, bk.direction, cfg)
         rec.update(score=round(score, 4), atr=round(atr, 2), action=action,
                    scores={k: (round(v, 4) if v is not None else None) for k, v in scores.items()},
-                   research={"tradingview": tv, "macro": macro, "news": news})
+                   research={"macro": macro, "news": news})
         if action != "hold" and bk.direction:
             rec["events"].append({"closed": bk.close(price, rec["time"], "signal")})
         if action in ("long", "short"):

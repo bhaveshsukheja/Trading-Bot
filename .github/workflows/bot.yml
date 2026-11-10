@@ -1,7 +1,9 @@
 name: gold-bot
 on:
-  schedule:
-    - cron: "7 * * * *"   # hourly; GitHub only runs schedules from the default branch
+  # Schedule deliberately OFF: the current price source (Yahoo) forbids automated
+  # collection in its terms. Re-enable only after switching to a licensed data source.
+  # schedule:
+  #   - cron: "7 * * * *"   # hourly; GitHub only runs schedules from the default branch
   workflow_dispatch:
 permissions:
   contents: write

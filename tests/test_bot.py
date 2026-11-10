@@ -4,7 +4,7 @@ import pandas as pd
 from goldbot.backtest import run_backtest
 from goldbot.broker import PaperBroker
 from goldbot.config import Config
-from goldbot.research import score_headline
+from goldbot.research import is_market_headline, score_headline
 from goldbot.strategy import blend, decide, technical_frame
 
 
@@ -72,8 +72,8 @@ def test_decide_and_blend(tmp_path):
     assert decide(0.2, -1, c) == "close"
     c.allow_short = False
     assert decide(-0.5, 0, c) == "hold" and decide(-0.5, 1, c) == "close"
-    assert abs(blend({"technical": 1.0, "tradingview": None, "macro": -1.0, "news": None},
-                     c.weights) - 0.5) < 1e-9
+    assert abs(blend({"technical": 1.0, "macro": -1.0, "news": None},
+                     c.weights) - 0.45 / 0.85) < 1e-9
 
 
 def test_technical_score_follows_trend_without_lookahead(tmp_path):
@@ -95,5 +95,14 @@ def test_backtest_profits_in_clean_uptrend_and_runs_on_noise(tmp_path):
 
 
 def test_headline_scoring():
-    assert score_headline("Gold surges to record high on safe-haven demand") > 0
+    # real headlines from the 2026-11-10 feed that the first version got wrong
+    assert score_headline("Gold Just Fell Below $4,000 After Its Worst Week in Five Months") < 0
+    assert score_headline("Gold Just Had Its Best Day Since August, Back Above $4,000") > 0
+    assert score_headline("Investors Are Rushing To Gold As US Dollar Tanks") == 2
+    assert score_headline("Gold rises as dollar falls") == 2
+    assert score_headline("Gold drops as dollar gains") == -2
     assert score_headline("Gold slips as dollar gains and yields rise") < 0
+    assert score_headline("Toward a forward-looking software company") == 0   # no 'war' substring hit
+    assert not is_market_headline("Fortitude Gold Reports Third Quarter 2026 Financial Results")
+    assert not is_market_headline("MSA Drilling Confirms Linked High-grade Polymetallic Breccias")
+    assert is_market_headline("Central Banks Just Bought More Gold Than the World's Jewelry Buyers")

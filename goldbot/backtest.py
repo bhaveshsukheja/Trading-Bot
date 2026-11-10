@@ -1,6 +1,6 @@
 """Backtest of the TECHNICAL component only.
 
-TradingView ratings, macro and news scores have no free history here, so the
+Macro and news scores have no free history here, so the
 live blended signal is NOT what gets tested. Signals are computed on a bar's
 close and executed at the next bar's open, with per-side costs.
 """

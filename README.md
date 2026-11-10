@@ -7,18 +7,25 @@ An automated bot that researches the gold market, scores it, and trades a
 > (see the backtest section). It is a research and paper-trading tool, not
 > financial advice. Do not put real money behind it on the strength of this repo.
 
+> **Data-source problem — read before running unattended.** The price, macro and news
+> data all come from Yahoo Finance, whose Terms of Service (checked 2026-11-10, "Last
+> updated: 1 November 2026") prohibit collecting data "using any automated means ... for
+> any purpose without our express, prior permission". The hourly schedule is therefore
+> switched **off** until the bot is moved to a licensed data source (for example a
+> broker's official API). TradingView was removed entirely for the same reason — see below.
+
 ## What each cycle does
 
 1. **Tracks price** — hourly COMEX gold futures bars (`GC=F`) from Yahoo Finance.
-2. **Checks TradingView** — the 1h / 4h / 1d technical ratings for `OANDA:XAUUSD`.
-3. **Researches context** — 10-day change in the dollar index and US 10-year yield
-   (both count against gold when rising), plus a keyword tally on Yahoo Finance headlines.
-4. **Analyses** — its own technical score (EMA 50/200 trend, MACD, RSI) blended with the
-   above: technical 45%, TradingView 30%, macro 15%, news 10%. Sources that fail are dropped
+2. **Researches context** — 10-day change in the dollar index and US 10-year yield
+   (both count against gold when rising), plus a keyword tally on recent Yahoo Finance
+   gold-market headlines.
+3. **Analyses** — its own technical score (EMA 50/200 trend, MACD, RSI) blended with the
+   above: technical 65%, macro 20%, news 15%. Sources that fail are dropped
    and the rest re-weighted; if prices fail, the cycle aborts without trading.
-5. **Executes on paper** — opens long/short when |score| ≥ 0.50, stop at 3×ATR, target at
+4. **Executes on paper** — opens long/short when |score| ≥ 0.50, stop at 3×ATR, target at
    6×ATR, closes when the score turns against the position.
-6. **Records** — account in `state/account.json`, every decision and its inputs in
+5. **Records** — account in `state/account.json`, every decision and its inputs in
    `state/journal.jsonl`.
 
 Risk limits: 1% of equity risked per trade, notional capped at 5× equity, no new entries
@@ -36,15 +43,26 @@ python -m goldbot backtest   # ~2 years of hourly data
 python -m pytest             # tests (needs pytest)
 ```
 
-**Automatic running:** `.github/workflows/bot.yml` runs one cycle every hour on GitHub
-Actions and commits `state/` back to the repo. GitHub only runs scheduled workflows from
-the **default branch**, so this starts once the workflow file is merged there. It can also
-be started by hand from the Actions tab.
+**Automatic running:** `.github/workflows/bot.yml` runs one cycle on GitHub Actions and
+commits `state/` back to the repo. Its hourly schedule is **commented out** because of the
+data-source problem above. GitHub only runs or lets you manually start a workflow once its
+file is on the **default branch**; the workflow has never actually been run.
+
+## Why TradingView is not used
+
+The first version read TradingView's technical ratings from the undocumented endpoint its
+website uses. TradingView's Terms of Use (section 3 and the licence restrictions, checked
+2026-11-10) license its data for "display-only use", list "automated trading ...
+algorithmic decision-making" as prohibited, and forbid using "automated means ... to
+access, monitor, copy, collect, or extract any content, data, or market data ... including
+by accessing or querying internal or undocumented endpoints" without written consent.
+That is exactly what the bot was doing, so the module was deleted. The bot's own technical
+score covers similar ground (moving averages and oscillators).
 
 ## Backtest: what it does and does not show
 
 Only the **technical** component can be backtested — there is no free history for the
-TradingView, macro and news inputs, so the live blended signal is untested. Signals are
+macro and news inputs, so the live blended signal is untested. Signals are
 taken on a bar's close and filled at the next open with $0.40/oz cost per side; when a
 bar touches both stop and target, the stop is assumed first.
 
@@ -81,13 +99,13 @@ How to read this:
 
 ## Known limitations
 
-- Yahoo's chart endpoint and TradingView's scanner endpoint are **unofficial**: they can
-  break, rate-limit or block cloud IPs at any time, and automated use of TradingView's may
-  be restricted by its terms of use. Yahoo futures quotes are delayed.
-- Signals use futures (`GC=F`); TradingView ratings are for spot (`OANDA:XAUUSD`). The two
-  prices differ by several dollars.
+- Yahoo's chart endpoint is **unofficial** and its use here is against Yahoo's terms (see
+  the top of this file). It can also break, rate-limit or block cloud IPs at any time, and
+  its futures quotes are delayed.
+- Signals use futures (`GC=F`), which trade several dollars away from spot gold.
 - Between hourly runs, stops and targets are checked against completed bars, so paper fills
   are approximations of what a real broker would give.
-- The news score is a crude keyword count and is often zero or noise.
+- The news score is a crude keyword count. On 2026-11-10 only 2 usable headlines were
+  less than 3 days old and it scored 0, so in practice it often contributes nothing.
 - No live broker is implemented. Going live would mean writing a broker class with the same
   `open` / `close` / `check_exits` surface as `PaperBroker`, against a real brokerage API.

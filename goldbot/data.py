@@ -2,6 +2,11 @@
 
 This endpoint is unofficial and undocumented: it can change, rate-limit or
 disappear without notice, and futures quotes on it are typically delayed.
+
+WARNING: Yahoo's Terms of Service (checked 2026-11-10, "Last updated: 1 November
+2026") prohibit collecting data from its services by automated means without
+express prior permission. Replace this module with a licensed data source
+before running the bot unattended.
 """
 import time
 from urllib.parse import quote

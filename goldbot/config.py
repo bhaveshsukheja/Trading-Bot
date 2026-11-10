@@ -9,12 +9,11 @@ class Config:
     history_range: str = "60d"      # history pulled each live cycle
     dollar_symbol: str = "DX-Y.NYB"  # US dollar index
     yield_symbol: str = "^TNX"      # US 10-year yield
-    # --- TradingView (unofficial scanner endpoint) ---
-    tv_ticker: str = "OANDA:XAUUSD"
-    tv_market: str = "cfd"
+    news_symbols: tuple = ("GC=F", "GLD")
+    news_max_age_days: int = 3
     # --- signal blending: weights are renormalised over sources that responded ---
     weights: dict = field(default_factory=lambda: {
-        "technical": 0.45, "tradingview": 0.30, "macro": 0.15, "news": 0.10})
+        "technical": 0.65, "macro": 0.20, "news": 0.15})
     entry_threshold: float = 0.50   # |score| needed to open a position
     exit_threshold: float = 0.10    # score this far against a position closes it
     allow_short: bool = True
