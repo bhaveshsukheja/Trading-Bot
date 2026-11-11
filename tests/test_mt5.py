@@ -27,7 +27,9 @@ class FakeMT5:
                        volume_max=50.0, digits=2, filling_mode=2, currency_profit="USD")
         self.reject = False
 
-    def initialize(self): return True
+    def initialize(self, *args, **kw):
+        self.init_call = (args, kw)
+        return True
     def shutdown(self): pass
     def last_error(self): return (-1, "fake")
     def account_info(self): return self.acct
@@ -112,6 +114,15 @@ def test_refuses_live_account_and_unknown_symbol(tmp_path):
     cfg = Config(symbol="GOLD.x")
     with pytest.raises(MT5Error, match="not found"):
         Gateway(cfg, FakeMT5(UP)).connect()
+
+
+def test_terminal_path_and_login_are_passed_without_password(tmp_path):
+    cfg = Config(terminal_path=r"C:\\MT5\\terminal64.exe", login=123, server="Demo-1")
+    fake = FakeMT5(UP)
+    Gateway(cfg, fake).connect()
+    assert fake.init_call == ((r"C:\\MT5\\terminal64.exe",), {"login": 123, "server": "Demo-1"})
+    Gateway(Config(), fake).connect()
+    assert fake.init_call == ((), {})
 
 
 def test_rejected_order_is_reported_not_crashed(tmp_path):

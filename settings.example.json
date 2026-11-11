@@ -1,4 +1,7 @@
 {
   "symbol": "XAUUSD",
+  "terminal_path": "C:/Program Files/Your Broker MT5 Terminal/terminal64.exe",
+  "login": 0,
+  "server": "",
   "dollar_symbol": ""
 }

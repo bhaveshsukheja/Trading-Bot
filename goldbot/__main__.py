@@ -21,8 +21,7 @@ def main():
     try:
         if args.cmd == "symbols":
             gw = Gateway(cfg)
-            if not gw.m.initialize():
-                raise MT5Error(f"cannot connect to the MetaTrader 5 terminal: {gw.m.last_error()}")
+            gw.initialize()
             print("\n".join(gw.find_symbols()) or "no symbol containing XAU or GOLD")
         elif args.cmd == "check":
             gw = Gateway(cfg).connect(require_tradable=False)

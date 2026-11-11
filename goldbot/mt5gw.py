@@ -33,9 +33,17 @@ class Gateway:
         return value
 
     # ---- connection ----
-    def connect(self, require_tradable: bool = True):
-        if not self.m.initialize():
+    def initialize(self):
+        """Attach to the terminal. The password is never passed: the terminal uses the
+        one it has saved for the account."""
+        c = self.cfg
+        args = [c.terminal_path] if c.terminal_path else []
+        kw = {k: v for k, v in (("login", c.login), ("server", c.server)) if v}
+        if not self.m.initialize(*args, **kw):
             raise MT5Error(f"cannot connect to the MetaTrader 5 terminal: {self.m.last_error()}")
+
+    def connect(self, require_tradable: bool = True):
+        self.initialize()
         info = self.m.symbol_info(self.cfg.symbol)
         if info is None:
             raise MT5Error(f"symbol {self.cfg.symbol!r} not found at this broker; run "

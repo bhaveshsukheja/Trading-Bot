@@ -11,6 +11,9 @@ class Config:
     bars: int = 600                 # completed bars pulled each cycle (needs > ema_slow)
     backtest_bars: int = 12000
     dollar_symbol: str = ""         # optional: broker's US dollar index symbol; "" = off
+    terminal_path: str = ""         # full path to terminal64.exe; "" = let the package find it
+    login: int = 0                  # account number; 0 = whichever account the terminal last used
+    server: str = ""                # trade server name as shown in the terminal; "" = saved one
     magic: int = 20261111           # tags this bot's orders so it never touches yours
     deviation_points: int = 30      # max slippage accepted on market orders
     allow_live_account: bool = False  # safety: refuse to trade unless the account is a demo
