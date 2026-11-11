@@ -1,73 +1,88 @@
-# Trading-Bot — gold paper-trading bot
+# Trading-Bot — gold bot for MetaTrader 5
 
-An automated bot that researches the gold market, scores it, and trades a
-**simulated (paper) account**. It sends no real orders and holds no real money.
+An automated bot that reads gold prices from a MetaTrader 5 (MT5) terminal, scores the
+market, and places trades through that terminal with a stop-loss and take-profit on
+every order. It is built to run on a **demo account** and refuses to trade on a real one
+unless you change a setting.
 
-> **No strategy "always makes a profit".** This one has no demonstrated edge
-> (see the backtest section). It is a research and paper-trading tool, not
-> financial advice. Do not put real money behind it on the strength of this repo.
+> **No strategy "always makes a profit".** This one has no demonstrated edge (see the
+> backtest section). It is a research tool, not financial advice. Do not put real money
+> behind it on the strength of this repo.
 
-> **Data-source problem — read before running unattended.** The price, macro and news
-> data all come from Yahoo Finance, whose Terms of Service (checked 2026-11-10, "Last
-> updated: 1 November 2026") prohibit collecting data "using any automated means ... for
-> any purpose without our express, prior permission". The hourly schedule is therefore
-> switched **off** until the bot is moved to a licensed data source (for example a
-> broker's official API). TradingView was removed entirely for the same reason — see below.
+> **Untested against a real terminal.** The MT5 connection was written from MetaQuotes'
+> official Python reference and tested only against a stand-in, because the `MetaTrader5`
+> package runs on Windows only. Expect to fix something on the first real run.
 
 ## What each cycle does
 
-1. **Tracks price** — hourly COMEX gold futures bars (`GC=F`) from Yahoo Finance.
-2. **Researches context** — 10-day change in the dollar index and US 10-year yield
-   (both count against gold when rising), plus a keyword tally on recent Yahoo Finance
-   gold-market headlines.
-3. **Analyses** — its own technical score (EMA 50/200 trend, MACD, RSI) blended with the
-   above: technical 65%, macro 20%, news 15%. Sources that fail are dropped
-   and the rest re-weighted; if prices fail, the cycle aborts without trading.
-4. **Executes on paper** — opens long/short when |score| ≥ 0.50, stop at 3×ATR, target at
-   6×ATR, closes when the score turns against the position.
-5. **Records** — account in `state/account.json`, every decision and its inputs in
-   `state/journal.jsonl`.
+1. **Tracks price** — pulls the last 600 completed hourly gold bars from the terminal.
+2. **Analyses** — a technical score from EMA 50/200 trend, MACD and RSI. Optionally blended
+   (80/20) with the 10-day change in a US dollar index symbol, if your broker has one and
+   you set `dollar_symbol`.
+3. **Executes** — opens long/short when |score| ≥ 0.50 with a stop at 3×ATR and a target at
+   6×ATR attached to the order, so the broker enforces them even if the bot is off. Closes
+   when the score turns against the position.
+4. **Records** — every decision in `state/journal.jsonl`.
 
-Risk limits: 1% of equity risked per trade, notional capped at 5× equity, no new entries
-after a 3% loss in a UTC day, and a kill switch that halts trading at a 15% drawdown
-(clear `"halted"` in `state/account.json` to resume). All settings live in `goldbot/config.py`.
+Risk limits: at most 1% of equity lost if the stop is hit (lot size is rounded *down*; if
+the broker's minimum lot would risk more, the trade is skipped), notional capped at 5×
+equity, no new entries after a 3% loss in a day, and a kill switch that blocks new entries
+at a 15% drawdown from the equity peak. The bot only ever touches positions it opened
+itself (matched by its magic number).
 
-## Running it
+There is no news or TradingView input: both TradingView's and Yahoo's terms prohibit
+automated collection (checked 2026-11-10), so those parts of the first version were removed.
+
+## Setup on Windows
+
+1. Install the MT5 terminal from your broker, log in to a **demo** account, and leave it running.
+2. In the terminal, enable algorithmic trading (the "Algo Trading" toolbar button; also
+   under Tools → Options → Expert Advisors). Menu names may differ by terminal version.
+3. Install 64-bit Python 3.10 or newer, then in this folder:
 
 ```bash
 pip install -r requirements.txt
-python -m goldbot run        # one cycle
-python -m goldbot loop       # a cycle every 10 minutes, forever
-python -m goldbot status     # paper account summary
-python -m goldbot backtest   # ~2 years of hourly data
-python -m pytest             # tests (needs pytest)
 ```
 
-**Automatic running:** `.github/workflows/bot.yml` runs one cycle on GitHub Actions and
-commits `state/` back to the repo. Its hourly schedule is **commented out** because of the
-data-source problem above. GitHub only runs or lets you manually start a workflow once its
-file is on the **default branch**; the workflow has never actually been run.
+4. Find your broker's gold symbol (brokers often add a suffix to `XAUUSD`):
 
-## Why TradingView is not used
+```bash
+python -m goldbot symbols
+```
 
-The first version read TradingView's technical ratings from the undocumented endpoint its
-website uses. TradingView's Terms of Use (section 3 and the licence restrictions, checked
-2026-11-10) license its data for "display-only use", list "automated trading ...
-algorithmic decision-making" as prohibited, and forbid using "automated means ... to
-access, monitor, copy, collect, or extract any content, data, or market data ... including
-by accessing or querying internal or undocumented endpoints" without written consent.
-That is exactly what the bot was doing, so the module was deleted. The bot's own technical
-score covers similar ground (moving averages and oscillators).
+5. If it is not exactly `XAUUSD`, copy `settings.example.json` to `settings.json` and put
+   the name there. Any field of `goldbot/config.py` can be overridden in that file.
+6. Test the connection. This places no orders:
+
+```bash
+python -m goldbot check
+```
+
+7. Run one cycle, then leave it running (or double-click `start_bot.bat`):
+
+```bash
+python -m goldbot run
+```
+
+```bash
+python -m goldbot loop
+```
+
+The bot only works while the PC is on, the terminal is open and logged in, and the loop
+is running. Stops and targets already placed stay active at the broker regardless.
+
+Other commands: `python -m goldbot backtest` (uses the broker's own history) and
+`python -m pytest` (needs `pip install pytest`).
+
+To resume after the kill switch, set `"halted": false` in `state/account.json`.
 
 ## Backtest: what it does and does not show
 
-Only the **technical** component can be backtested — there is no free history for the
-macro and news inputs, so the live blended signal is untested. Signals are
-taken on a bar's close and filled at the next open with $0.40/oz cost per side; when a
-bar touches both stop and target, the stop is assumed first.
-
-Hourly `GC=F`, 2024-07-02 to 2026-11-10, $10,000 start. Buy-and-hold over the same
-period: **+72.8%**.
+These numbers are from 2026-11-10 on hourly COMEX gold futures from Yahoo (before that
+source was removed), 2024-07-02 to 2026-11-10, $10,000 start, $0.40/oz cost per side,
+technical signal only. **Rerun `python -m goldbot backtest` on your broker's data** — spot
+gold, the broker's spread and its trading hours will give different results.
+Buy-and-hold over the same period: **+72.8%**.
 
 | shorts | stop×ATR | target×ATR | threshold | return | max DD | trades | kill switch hit |
 |---|---|---|---|---|---|---|---|
@@ -88,24 +103,20 @@ period: **+72.8%**.
 | no | 3 | 6 | 0.35 | +51.1% | −13.6% | 174 | no |
 | no | 3 | 6 | 0.50 | +61.1% | −14.0% | 143 | no |
 
-How to read this:
-
 - The first row was the original design, chosen before any testing. **It lost money.**
 - The bold row is the current default. It was picked *after* seeing this table, so its
   +71.8% is an in-sample, best-of-16 number — expect worse going forward.
 - Results swing from −11% to +72% on small setting changes, half the settings hit the
-  kill switch, and **none beat simply holding gold** in a period when gold rose 73%.
-  That is what a strategy without a reliable edge looks like.
+  kill switch, and **none beat simply holding gold**. That is what a strategy without a
+  reliable edge looks like.
 
 ## Known limitations
 
-- Yahoo's chart endpoint is **unofficial** and its use here is against Yahoo's terms (see
-  the top of this file). It can also break, rate-limit or block cloud IPs at any time, and
-  its futures quotes are delayed.
-- Signals use futures (`GC=F`), which trade several dollars away from spot gold.
-- Between hourly runs, stops and targets are checked against completed bars, so paper fills
-  are approximations of what a real broker would give.
-- The news score is a crude keyword count. On 2026-11-10 only 2 usable headlines were
-  less than 3 days old and it scored 0, so in practice it often contributes nothing.
-- No live broker is implemented. Going live would mean writing a broker class with the same
-  `open` / `close` / `check_exits` surface as `PaperBroker`, against a real brokerage API.
+- Never run against a real MT5 terminal (see top). Things most likely to need adjusting:
+  the order filling mode, the symbol name, and how the terminal reports closed trades.
+- Position sizing assumes a USD account and a USD-quoted gold symbol; the bot refuses to
+  trade otherwise.
+- Swap (overnight financing) and commission are not modelled in the backtest.
+- The live blend with a dollar index, if enabled, is not what the backtest tests.
+- Check your broker's client agreement for your region before automating, and whether
+  leveraged gold trading with that broker is permitted where you live.

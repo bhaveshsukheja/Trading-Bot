@@ -1,7 +1,6 @@
-"""Backtest of the TECHNICAL component only.
+"""Backtest of the technical signal on historical bars.
 
-Macro and news scores have no free history here, so the
-live blended signal is NOT what gets tested. Signals are computed on a bar's
+The optional dollar-index input is not included. Signals are computed on a bar's
 close and executed at the next bar's open, with per-side costs.
 """
 import pandas as pd
